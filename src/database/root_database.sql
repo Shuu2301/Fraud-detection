@@ -60,32 +60,8 @@ CREATE TABLE transactions (
     FOREIGN KEY (mcc) REFERENCES mcc_codes(mcc)
 );
 
--- Data Warehouse Schema for Fraud Detection Analytics
--- Star Schema: fact_transactions with dimensions
-
-CREATE TABLE dim_date (
-    date_key INT PRIMARY KEY,
-    full_date DATE NOT NULL,
-    year INT,
-    month INT,
-    day INT,
-    quarter INT,
-    day_of_week INT,
-    is_weekend BOOLEAN
+CREATE TABLE fraud_labels (
+    transaction_id BIGINT PRIMARY KEY,
+    label ENUM('Yes','No') NOT NULL DEFAULT 'No',
+    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE
 );
-
-CREATE TABLE dim_users (
-    user_key BIGINT PRIMARY KEY,
-    client_id BIGINT NOT NULL,
-    current_age INT,
-    retirement_age INT,
-    birth_year INT,
-    birth_month INT,
-    gender VARCHAR(10),
-    address VARCHAR(255),
-    latitude DECIMAL(9,6),
-    longitude DECIMAL(9,6),
-    per_capita_income DECIMAL(15,2),
-    yearly_income DECIMAL(15,2),
-    total_debt DECIMAL(15,2),
-    credit_score INT,

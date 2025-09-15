@@ -1,0 +1,40 @@
+Finance Analytics Requirements
+
+1. Understand performance by customer, card, and merchant category
+Objective: Identify which customers, card types, and merchant categories drive the most financial activity.
+Track transaction volume and total spend by day/month/quarter.
+Compare spending behavior across card types (credit vs. debit, premium vs. standard).
+Analyze merchant categories (MCC) to identify growing/declining industries (e.g., retail, dining, travel).
+Monitor geographic distribution of transactions by city/state → detect regional spending trends.
+
+2. Fraud detection and anomaly monitoring
+Link transactions with fraud labels to calculate fraud rate per card type, customer segment, and merchant category.
+Track suspicious patterns (e.g., high-value withdrawals, rapid repeated transactions, foreign transactions).
+Measure time-to-detection for fraud → improve fraud monitoring systems.
+
+3. Customer financial segmentation
+Segment customers based on spending behavior, credit score, debt levels, and income.
+Identify high-value customers:
+Total spending per customer.
+Average transaction value.
+Long-term credit card usage and repayment history.
+Detect at-risk customers with rising debt or frequent credit limit breaches.
+Compare demographic factors (age, gender, income) with financial activity.
+
+4. Card portfolio performance analysis
+Objective: Measure profitability and effectiveness of different card products.
+Analyze card issuance growth (per year, per customer segment).
+Track card activity rates (active vs. dormant cards).
+Compare credit vs. debit card performance.
+Monitor credit limit utilization (ratio of spending vs. card limit).
+
+5. Merchant and MCC insights
+Rank merchants by transaction count, revenue contribution, and fraud incidents.
+Group MCC codes to analyze industry-level performance (e.g., travel spending vs. retail).
+Detect merchant risk categories with high fraud or error rates.
+
+6. Customer lifetime value & retention
+Measure repeat transactions vs. one-time transactions.
+Track loyalty by analyzing long-term active clients.
+Build customer lifetime value (CLV) models based on spend, income, and repayment capacity.
+Identify opportunities for cross-selling/upselling (e.g., premium card upgrades).

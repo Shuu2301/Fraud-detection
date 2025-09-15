@@ -11,6 +11,8 @@ Apache Doris Quick Start Guide
    swapoff -a
    nano /etc/fstab  # Comment out swap lines
 
+   swapon -a # after finish using Doris
+
    # Set vm.max_map_count
    echo "vm.max_map_count=2000000" >> /etc/sysctl.conf
    sysctl -p
