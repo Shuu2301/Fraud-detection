@@ -1,8 +1,8 @@
 sudo docker compose up -d
-sleep 5
+sleep 10
 
 docker ps
-sleep 5
+sleep 15
 
 # Register MySQL source connector
 curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json"\
