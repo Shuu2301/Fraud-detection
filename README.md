@@ -35,9 +35,9 @@ STREAMING PROCESSING:
 | (Finance DB)   |                |        | (Topics)       | (Processing)    |
 |                | <------------- |        | <------------- |                 |
 +----------------+   (Data Sink)  +--------+                +-------+---------+
-                                                                     |
-                                         (Processed Data)            | Write
-                                                                     V
+                                                                     │
+                                                                     │ Write
+                                                                     ▼
 +---------------------------------+
 |                                 |
 | MinIO (S3) with Delta Lake      |
