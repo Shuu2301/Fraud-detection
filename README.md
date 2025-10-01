@@ -56,7 +56,7 @@ The system's data flow follows a modern Lakehouse architecture for financial ana
 /
 ├── infra/                    # Infrastructure as Code
 │   ├── docker-compose.yml   # The main file; defines all services, networks, and volumes.
-│   ├── start_docker.sh      # Startup script that initializes the platform and CDC.
+│   ├── start_infra.sh       # Startup script that initializes the platform and CDC.
 │   ├── config/              # Configuration files for Debezium connectors.
 │   └── database/            # Database schemas, scripts, and initialization data.
 │       ├── schema.sql       # SQL statements for the initial database schema.
@@ -72,10 +72,10 @@ The system's data flow follows a modern Lakehouse architecture for financial ana
 ## 6. Detailed Setup & Running Guide
 
 ### Prerequisites
--   [Docker Desktop](https://www.docker.com/products/docker-desktop/) is installed and running.
--   On Windows, Docker Desktop should be configured to use the WSL 2 backend.
+-   [Docker](https://docs.docker.com/engine/install/ubuntu/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed and running on Ubuntu 25.04.
 -   Git for cloning the repository.
 -   A stable internet connection to download Docker images and packages.
+-   Ensure your user is in the `docker` group to run Docker commands without sudo: `sudo usermod -aG docker $USER` (then log out and back in).
 
 ### Step 1: Clone the Project
 ```shell
@@ -83,23 +83,24 @@ git clone <YOUR_REPOSITORY_URL>
 cd finance_analytics
 ```
 
-### Step 2: Configure Docker Resources (Important for Windows)
-To ensure Docker has enough resources to run all services smoothly, especially Spark, create a `.wslconfig` file in your user profile directory (`C:\Users\<Your_Username>`) with the following content:
-```ini
-[wsl2]
-memory=12GB   # Allocate at least 8GB RAM; 12GB or 16GB is recommended
-processors=4  # Allocate at least 4 CPU cores
+### Step 2: Configure Docker Resources
+To ensure Docker has enough resources to run all services smoothly, especially Spark, you may need to adjust Docker's resource limits. On Ubuntu, you can configure this through Docker Desktop settings or by editing `/etc/docker/daemon.json`:
+```json
+{
+  "memory": "12g",
+  "cpus": "4.0"
+}
 ```
-After creating/editing this file, **restart Docker Desktop** for the changes to take effect.
+Restart Docker after changes: `sudo systemctl restart docker`.
 
 ### Step 3: Start the Infrastructure Services
 This command will start all background services. The first time you run this, it may take several minutes to download the necessary images.
 ```shell
 # Make the startup script executable
-chmod +x infra/start_docker.sh
+chmod +x infra/start_infra.sh
 
 # Start all services and initialize CDC
-./infra/start_docker.sh
+./infra/start_infra.sh
 ```
 After it finishes, verify that all containers are up and running:
 ```shell
@@ -173,7 +174,7 @@ Once all services are running, you can access the various UIs from your local ma
 - **`pull access denied` error during `docker compose up`:**
   - This is usually caused by Docker Hub's rate limiting. The most reliable fix is to create a free Docker Hub account and run `docker login` in your terminal.
 - **Spark job crashes with `Py4JException` or `OutOfMemoryError`:**
-  - This is a resource issue. Ensure you have configured `.wslconfig` (Step 2) and allocated enough memory to Docker Desktop. You can also increase the memory allocated to the Spark driver/executor in the streaming script.
+  - This is a resource issue. Ensure you have configured Docker resource limits (Step 2) and allocated enough memory to Docker. You can also increase the memory allocated to the Spark driver/executor in the streaming script.
 - **Debezium connector shows `FAILED` status:**
   - Check the connector logs with `docker logs connect`. Common issues include incorrect database credentials or missing CDC permissions on MySQL tables.
 - **Data is not appearing in Delta Lake:**
