@@ -1,3 +1,186 @@
-# Finance analytics platform 
+# Real-Time Finance Analytics Platform: From CDC to Delta Lake
 
-A comprehensive real-time data lakehouse platform for financial analytics, featuring Change Data Capture (CDC), streaming processing, and automated workflow orchestration.
+## 1. Project Overview
+
+This project demonstrates a complete, end-to-end, modern data lakehouse platform for financial analytics. The primary goal is to showcase a robust architecture capable of capturing, processing, and analyzing financial data in near real-time, moments after it's generated in the source database.
+
+Instead of waiting for nightly batch reports, this system allows financial analysts and stakeholders to monitor transaction patterns, detect fraud, and analyze customer behavior minute-by-minute. It showcases an entire workflow, from a new transaction being recorded in MySQL to its impact appearing in analytics dashboards, all within seconds. This platform is a prime example of a streaming-first **Lakehouse architecture** for financial services.
+
+## 2. Project Goals & Key Features
+
+-   **Real-time Change Data Capture (CDC):** Automatically capture every change (INSERT, UPDATE, DELETE) from the MySQL database without altering the original application's logic.
+-   **Multi-table Financial Data Processing:** Handle complex financial schemas including transactions, users, cards, MCC codes, and fraud labels.
+-   **Stateful Stream Processing:** Apply complex financial analytics logic that requires maintaining state across different micro-batches of data.
+-   **Lakehouse Architecture on Object Storage:** Utilize Delta Lake on MinIO to combine the cost-effective flexibility of a Data Lake with the reliability and performance of a Data Warehouse for financial data.
+-   **Fully Containerized Environment:** The entire system is defined and orchestrated using Docker, ensuring consistency and ease of deployment across any environment (local, on-premise, cloud).
+-   **Scalable by Design:** The architecture is built on components like Kafka and Spark, allowing it to scale out to handle larger financial data volumes in the future.
+
+## 3. Architecture Diagram
+
+The system's data flow follows a modern Lakehouse architecture for financial analytics.
+
+```
++----------------+   CDC Events   +--------+   Raw Events   +-----------------+
+|                | -------------- |        | -------------- |                 |
+|     MySQL      | (Debezium)     | Kafka  |                | Spark Streaming |
+| (Finance DB)   |                |        | (Topics)       | (Processing)    |
+|                | <------------- |        | <------------- |                 |
++----------------+   (Data Sink)  +--------+                +-------+---------+
+                                                                     |
+                                         (Processed Data)            | Write
+                                                                     V
++---------------------------------+
+|                                 |
+| MinIO (S3) with Delta Lake      |
+| (Data Lakehouse)                |
+|                                 |
++---------------------------------+
+```
+
+![Architecture](images/architecture.png)
+
+## 4. Technology Stack
+
+| Category | Technology | Version (Example) | Role in Project |
+| :--- | :--- | :--- | :--- |
+| **Containerization** | Docker, Docker Compose | v20+ | Packages, defines, and orchestrates all services. |
+| **Database** | MySQL | 8.0 | Source Online Transaction Processing (OLTP) database for financial data. |
+| **CDC** | Debezium | 2.5+ | Captures and streams database changes to Kafka. |
+| **Message Queue** | Apache Kafka | 3.6+ | Central hub for ingesting and distributing financial data events. |
+| **Data Processing** | Apache Spark | 3.5.0 | Processes data streams from Kafka, applies financial analytics logic, and writes to Delta Lake. |
+| **Data Lake** | MinIO, Delta Lake | latest, 3.1.0 | Stores financial data as structured, versioned Delta tables. |
+| **Auxiliary Tools** | Kafka UI, MinIO Console | latest | Web UIs for managing and monitoring Kafka and MinIO. |
+
+## 5. Directory Structure
+```
+/
+├── infra/                    # Infrastructure as Code
+│   ├── docker-compose.yml   # The main file; defines all services, networks, and volumes.
+│   ├── start_docker.sh      # Startup script that initializes the platform and CDC.
+│   ├── config/              # Configuration files for Debezium connectors.
+│   └── database/            # Database schemas, scripts, and initialization data.
+│       ├── schema.sql       # SQL statements for the initial database schema.
+│       └── scripts/         # Database maintenance and initialization scripts.
+├── src/                     # Source code for data processing.
+│   └── stream_processing/   # Contains Python scripts for Spark streaming.
+│       └── rootdb_stream.py # The main Spark job; processes financial data streams.
+├── datasets/                # Sample financial datasets for testing.
+├── docs/                    # Documentation and requirements.
+└── README.md               # This file.
+```
+
+## 6. Detailed Setup & Running Guide
+
+### Prerequisites
+-   [Docker Desktop](https://www.docker.com/products/docker-desktop/) is installed and running.
+-   On Windows, Docker Desktop should be configured to use the WSL 2 backend.
+-   Git for cloning the repository.
+-   A stable internet connection to download Docker images and packages.
+
+### Step 1: Clone the Project
+```shell
+git clone <YOUR_REPOSITORY_URL>
+cd finance_analytics
+```
+
+### Step 2: Configure Docker Resources (Important for Windows)
+To ensure Docker has enough resources to run all services smoothly, especially Spark, create a `.wslconfig` file in your user profile directory (`C:\Users\<Your_Username>`) with the following content:
+```ini
+[wsl2]
+memory=12GB   # Allocate at least 8GB RAM; 12GB or 16GB is recommended
+processors=4  # Allocate at least 4 CPU cores
+```
+After creating/editing this file, **restart Docker Desktop** for the changes to take effect.
+
+### Step 3: Start the Infrastructure Services
+This command will start all background services. The first time you run this, it may take several minutes to download the necessary images.
+```shell
+# Make the startup script executable
+chmod +x infra/start_docker.sh
+
+# Start all services and initialize CDC
+./infra/start_docker.sh
+```
+After it finishes, verify that all containers are up and running:
+```shell
+docker compose ps
+```
+
+### Step 4: Verify Platform Health
+The startup script automatically:
+- Initializes the MySQL database schema
+- Registers the Debezium CDC connector
+- Creates Kafka topics for financial data
+
+Check that everything is working:
+```shell
+# Check Debezium connector status
+curl localhost:8083/connectors/finance-mysql-connector/status | jq
+
+# Check Kafka topics
+docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+### Step 5: Load Sample Financial Data (Optional)
+To populate the system with sample data for testing:
+```shell
+# The startup script already initializes topics with dummy data
+# Or manually run the initialization script
+docker exec -i mysql mysql -u root -proot123 finance < infra/database/scripts/initialize_topics.sql
+```
+
+### Step 6: Run the Spark Streaming Job
+Start the main financial data processing script. This script will run continuously, listening to Kafka and writing processed data to MinIO Delta Lake.
+```shell
+# Run the streaming processor (adjust paths as needed)
+python src/stream_processing/rootdb_stream.py
+```
+This terminal will now display the Spark processing logs showing financial data being processed.
+
+### Step 7: Monitor Real-time Processing
+To see the system in action, you can monitor the data flow through the various UIs while the streaming job processes financial transactions.
+
+## 7. Accessing the User Interfaces (UIs)
+Once all services are running, you can access the various UIs from your local machine's web browser.
+
+### MinIO Console (Data Lake)
+-   **URL:** `http://localhost:9901`
+-   **Credentials:** `minioadmin` / `minioadmin123`
+-   **Description:** Browse the buckets and data files in your Data Lake. Navigate to the `rootdb` bucket to see the `transactions`, `users`, `cards` Delta tables.
+
+![MinIO Console](images/minio.png)
+
+### Kafka UI (Message Queue)
+-   **URL:** `http://localhost:9089`
+-   **Description:** Manage topics, view financial transaction messages as they are produced by Debezium, and monitor the health of the Kafka cluster.
+
+![Kafka UI](images/kafka.png)
+
+### MySQL Database (Source Data)
+-   **Host:** `localhost:30306`
+-   **Credentials:** `root` / `root123`
+-   **Description:** Connect directly to the source MySQL database to view or modify financial data.
+
+## 8. Troubleshooting Common Issues
+- **`pull access denied` error during `docker compose up`:**
+  - This is usually caused by Docker Hub's rate limiting. The most reliable fix is to create a free Docker Hub account and run `docker login` in your terminal.
+- **Spark job crashes with `Py4JException` or `OutOfMemoryError`:**
+  - This is a resource issue. Ensure you have configured `.wslconfig` (Step 2) and allocated enough memory to Docker Desktop. You can also increase the memory allocated to the Spark driver/executor in the streaming script.
+- **Debezium connector shows `FAILED` status:**
+  - Check the connector logs with `docker logs connect`. Common issues include incorrect database credentials or missing CDC permissions on MySQL tables.
+- **Data is not appearing in Delta Lake:**
+  - Check the pipeline step-by-step: 1. Is the Debezium connector in a `RUNNING` state? 2. Are new messages appearing in the relevant Kafka topic (use Kafka UI)? 3. Is the Spark job processing new batches? 4. Check Spark logs for any processing errors.
+
+## 9. Future Roadmap
+This financial analytics platform can be extended with many real-world applications:
+-   **Real-time Fraud Detection:** Build machine learning models to detect suspicious transaction patterns using streaming data.
+-   **Customer Behavior Analytics:** Analyze spending patterns and provide personalized financial insights.
+-   **Risk Assessment Engine:** Calculate real-time credit risk scores based on transaction history.
+-   **Regulatory Reporting:** Automate compliance reporting with real-time data aggregation.
+-   **Interactive Financial Dashboard:** Add Streamlit or similar for real-time financial visualizations.
+-   **Multi-tenant Architecture:** Support multiple financial institutions with isolated data processing.
+
+
+
+
+
