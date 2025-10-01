@@ -1,4 +1,4 @@
-# Real-Time Finance Analytics Platform: From CDC to Delta Lake
+# Finance analytics platform
 
 ## 1. Project Overview
 
