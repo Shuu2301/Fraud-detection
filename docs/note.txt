@@ -19,13 +19,12 @@ curl -s localhost:8083/connectors/finance-mysql-connector/status | jq
 # 6. Check Kafka topics
 sudo docker exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
 
-# 7. Monitor via Kafka UI
-# Open http://localhost:9089
-
-
-# 8. Access MySQL
+# 7. Access MySQL
 # MySQL Workbench: localhost:30306, user: root, password: root123
 # Or via Docker: sudo docker exec -it mysql mysql -u root -p
 
-# 9. Access MinIO UI
-# Open http://localhost:9901
+
+# 8. Monitor via
+   - Kafka UI: http://localhost:9089
+   - Spark UI: http://localhost:4040
+   - MinIO Console: http://localhost:9901

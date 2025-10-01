@@ -1,3 +1,5 @@
+USE finance;
+
 -- Dummy value to initialize the kafka topics
 
 INSERT INTO users (client_id, current_age, retirement_age, birth_year, birth_month, gender, address, latitude, longitude, per_capita_income, yearly_income, total_debt, credit_score, num_credit_cards) 
@@ -18,6 +20,43 @@ VALUES (999999999999, '2000-01-01 00:00:00', 999999999999, 999999999999, 0.00, '
 
 INSERT INTO fraud_labels (transaction_id, label) 
 VALUES (999999999999, 'No');
+
+
+UPDATE users 
+SET current_age = 31, 
+    yearly_income = 75000.00, 
+    credit_score = 650,
+    address = 'Updated Address 123'
+WHERE client_id = 999999999999;
+
+-- Update merchant type
+UPDATE mcc_codes 
+SET merchant_type = 'Updated Merchant Category'
+WHERE mcc = 999999999999;
+
+-- -- Update card information
+-- UPDATE cards 
+-- SET credit_limit = 5000.00,
+--     expires = '2025-12-31',
+--     year_pin_last_changed = 2024,
+--     card_on_dark_web = 'Yes'
+-- WHERE card_id = 999999999999;
+
+-- -- Update transaction details
+-- UPDATE transactions 
+-- SET amount = 150.75,
+--     merchant_city = 'Updated City',
+--     merchant_state = 'CA',
+--     zip = '90210',
+--     errors = 'Updated transaction record'
+-- WHERE transaction_id = 999999999999;
+
+-- -- Update fraud label
+-- UPDATE fraud_labels 
+-- SET label = 'Yes'
+-- WHERE transaction_id = 999999999999;
+
+
 
 DELETE FROM fraud_labels WHERE transaction_id = 999999999999;
 DELETE FROM transactions WHERE transaction_id = 999999999999;
