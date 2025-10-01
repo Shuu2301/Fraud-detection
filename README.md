@@ -21,29 +21,24 @@ The system's data flow follows a modern Lakehouse architecture for financial ana
 
 ```
 BATCH PROCESSING:
-+----------------+   ETL Jobs    +-----------------+   Processed    +-----------------+
-|                | -------------- |                 | -------------- |                 |
-|   CSV Files    | (Spark Batch)  | Data Validation | (Delta Lake)   | MinIO (S3)      |
-| (Historical)   |                | & Cleaning      |                | Lakehouse       |
-|                | <------------- |                 | <------------- |                 |
-+----------------+                +-----------------+                +-----------------+
+Raw Data ──▶ MySQL ──▶ MinIO_rootdb_bucket ──▶ MinIO_lakehouse
+             │                                      │
+             │                                      │
+             ▼                                      ▼
+      +----------------+                     +-----------------+
+      │   Source OLTP  │                     │ Delta Lake      │
+      │   Database     │                     │ Tables          │
+      +----------------+                     +-----------------+
 
 STREAMING PROCESSING:
-+----------------+   CDC Events   +--------+   Raw Events   +-----------------+
-|                | -------------- |        | -------------- |                 |
-|     MySQL      | (Debezium)     | Kafka  |                | Spark Streaming |
-| (Finance DB)   |                |        | (Topics)       | (Processing)    |
-|                | <------------- |        | <------------- |                 |
-+----------------+   (Data Sink)  +--------+                +-------+---------+
-                                                                     │
-                                                                     │ Write
-                                                                     ▼
-+---------------------------------+
-|                                 |
-| MinIO (S3) with Delta Lake      |
-| (Data Lakehouse)                |
-|                                 |
-+---------------------------------+
+Streaming Data ──▶ MySQL ──▶ Debezium ──▶ Kafka ──▶ Spark Streaming ──▶ MinIO
+                      │           │          │           │                │
+                      │           │          │           │                │
+                      ▼           ▼          ▼           ▼                ▼
+            +----------------+ +---------+ +--------+ +----------+ +-----------+
+            │   Source OLTP  │ │  CDC    │ │ Events│  │ Real-time│ │ Delta Lake│
+            │   Database     │ │Connector│ │Topics │  │Processing│ │ Tables    │
+            +----------------+ +---------+ +--------+ +----------+ +-----------+
 ```
 
 ![Architecture](images/architecture.png)
