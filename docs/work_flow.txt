@@ -1,6 +1,0 @@
-1. ./start_docker
-2. Initialize Kafka topics by running the initialize_topics.sql inside MySQL
-3. Run preprocessing.ipynb (one-time execution, no run again)
-4. Run database_migration.ipynb (one-time execution, no run again)
-5. Run dw_population.ipynb (Run when need to update data for analytics)
-6. Run rootdb_stream.ipynb for streaming data

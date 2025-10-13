@@ -8,14 +8,18 @@ import shutil
 import os
 import time
 
-# Initialize Spark with streaming and Delta Lake
+MINIO_ENDPOINT = "http://localhost:9900"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin123"
+
+# Initialize Spark
 spark = SparkSession.builder \
     .appName("CDC_Stream_Processing") \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9900") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123") \
+    .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT) \
+    .config("spark.hadoop.fs.s3a.access.key", MINIO_ACCESS_KEY) \
+    .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY) \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .config("spark.jars.packages", 
@@ -204,7 +208,7 @@ def create_table_stream(table_name):
     
     print(f"Creating stream for table: {table_name}")
     
-    # Read from Kafka topic starting from latest offset (only process CDC events that arrive after code starts)
+    # Read from Kafka topic
     kafka_df = spark \
         .readStream \
         .format("kafka") \

@@ -1,3 +1,7 @@
+# Dataset link
+https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets
+
+
 # 1. Start all services
 cd /home/bnguyen/Desktop/finance_analytics/infra
 sudo docker compose up -d
@@ -29,3 +33,5 @@ sudo docker exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 
    - Spark UI: http://localhost:4040
    - MinIO Console: http://localhost:9901
    - Airflow UI: http://localhost:8082
+   - Streamlit: http://localhost:8501
+  

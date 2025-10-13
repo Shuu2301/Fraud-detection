@@ -147,6 +147,25 @@ services:
     networks:
       - finance-network
 
+  # Streamlit
+  streamlit:
+    build:
+      context: ..
+      dockerfile: infra/streamlit/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../src:/app/src
+    networks:
+      - finance-network
+    depends_on:
+      - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   finance-network:
     driver: bridge
