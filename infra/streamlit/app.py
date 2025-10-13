@@ -92,9 +92,14 @@ def get_top_5_newest_transactions():
 def get_transaction_volume_over_time():
     try:
         df = spark.read.format("delta").load("s3a://rootdb/transactions/")
-        # Extract date from trans_date for daily grouping
-        trends = df.withColumn("date", to_date("trans_date")) \
-                   .groupBy("date").count().orderBy("date").toPandas()
+        # Group by every 4 months
+        trends = df.withColumn("year", year("trans_date")) \
+                   .withColumn("month", month("trans_date")) \
+                   .withColumn("period", floor((col("month") - 1) / 4)) \
+                   .groupBy("year", "period").count() \
+                   .withColumn("period_label", concat_ws("-", col("year"), (col("period") * 4 + 1).cast("string"), lit("to"), (col("period") * 4 + 4).cast("string"))) \
+                   .select("period_label", "count") \
+                   .orderBy("year", "period").toPandas()
         return trends
     except Exception as e:
         st.error(f"Error loading transaction volume: {e}")
@@ -115,88 +120,84 @@ def get_top_10_customers():
         st.error(f"Error loading top customers: {e}")
         return None
 
-# Sidebar for page selection
-page = st.sidebar.radio("Select Dashboard", ["Overview", "Dashboards"])
-
 # Dashboard title
-st.title("Dashboards")
+st.title("Financial Analytics Dashboard")
 
-if page == "Overview":
-    # Get fresh data
-    total_users = get_total_users()
-    total_transactions = get_total_transactions()
-    total_cards = get_total_cards()
-    total_mcc = get_total_mcc_codes()
-    total_merchants = get_total_unique_merchants()
+# Get fresh data
+total_users = get_total_users()
+total_transactions = get_total_transactions()
+total_cards = get_total_cards()
+total_mcc = get_total_mcc_codes()
+total_merchants = get_total_unique_merchants()
 
-    # Display metrics in columns
-    col1, col2, col3, col4, col5 = st.columns(5)
+# Display metrics in columns
+col1, col2, col3, col4, col5 = st.columns(5)
 
-    with col1:
-        if isinstance(total_users, int):
-            st.metric("Total Users", f"{total_users:,}")
-        else:
-            st.metric("Total Users", "Error")
-
-    with col2:
-        if isinstance(total_transactions, int):
-            st.metric("Total Transactions", f"{total_transactions:,}")
-        else:
-            st.metric("Total Transactions", "Error")
-
-    with col3:
-        if isinstance(total_cards, int):
-            st.metric("Total Cards", f"{total_cards:,}")
-        else:
-            st.metric("Total Cards", "Error")
-
-    with col4:
-        if isinstance(total_mcc, int):
-            st.metric("Total MCC Codes", f"{total_mcc:,}")
-        else:
-            st.metric("Total MCC Codes", "Error")
-
-    with col5:
-        if isinstance(total_merchants, int):
-            st.metric("Total Unique Merchants", f"{total_merchants:,}")
-        else:
-            st.metric("Total Unique Merchants", "Error")
-
-    # Recent Transactions section
-    st.header("Top 5 Newest Transactions")
-    recent = get_top_5_newest_transactions()
-    if recent is not None and not recent.empty:
-        st.table(recent)
+with col1:
+    if isinstance(total_users, int):
+        st.metric("Total Users", f"{total_users:,}")
     else:
-        st.warning("No recent transactions available.")
+        st.metric("Total Users", "Error")
 
-    # Status messages
-    if isinstance(total_users, int) and total_users > 0:
-        st.success("Successfully connected")
-    elif isinstance(total_users, int) and total_users == 0:
-        st.warning("No user data found. Check your Delta Lake table.")
+with col2:
+    if isinstance(total_transactions, int):
+        st.metric("Total Transactions", f"{total_transactions:,}")
     else:
-        st.error("Failed to load user data")
+        st.metric("Total Transactions", "Error")
 
-elif page == "Dashboards":
-    st.header("Transaction Volume Over Time")
-    trends = get_transaction_volume_over_time()
-    if trends is not None and not trends.empty:
-        fig = px.line(trends, x="date", y="count", title="Daily Transaction Volume")
-        st.plotly_chart(fig, use_container_width=True)
+with col3:
+    if isinstance(total_cards, int):
+        st.metric("Total Cards", f"{total_cards:,}")
     else:
-        st.warning("No transaction volume data available.")
+        st.metric("Total Cards", "Error")
 
-    st.header("Top 10 Customers by Transaction Count")
-    customers = get_top_10_customers()
-    if customers is not None and not customers.empty:
-        # Sort by count to ensure proper order from top to bottom
-        customers = customers.sort_values(by='count', ascending=True)
-        fig = px.bar(customers, x="count", y="client_id", orientation='h', title="Top 10 Customers")
-        fig.update_layout(yaxis={'type': 'category'})
-        st.plotly_chart(fig, use_container_width=True)
+with col4:
+    if isinstance(total_mcc, int):
+        st.metric("Total MCC Codes", f"{total_mcc:,}")
     else:
-        st.warning("No customer data available.")
+        st.metric("Total MCC Codes", "Error")
+
+with col5:
+    if isinstance(total_merchants, int):
+        st.metric("Total Unique Merchants", f"{total_merchants:,}")
+    else:
+        st.metric("Total Unique Merchants", "Error")
+
+# Recent Transactions section
+st.header("Top 5 Newest Transactions")
+recent = get_top_5_newest_transactions()
+if recent is not None and not recent.empty:
+    st.table(recent)
+else:
+    st.warning("No recent transactions available.")
+
+# Status messages
+if isinstance(total_users, int) and total_users > 0:
+    st.success("Successfully connected")
+elif isinstance(total_users, int) and total_users == 0:
+    st.warning("No user data found. Check your Delta Lake table.")
+else:
+    st.error("Failed to load user data")
+
+st.header("Top 10 Customers by Transaction Count")
+customers = get_top_10_customers()
+if customers is not None and not customers.empty:
+    # Sort by count to ensure proper order from top to bottom
+    customers = customers.sort_values(by='count', ascending=True)
+    fig = px.bar(customers, x="count", y="client_id", orientation='h', title="Top 10 Customers")
+    fig.update_layout(yaxis={'type': 'category'})
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("No customer data available.") 
+
+st.header("Transaction Volume Over Time")
+trends = get_transaction_volume_over_time()
+if trends is not None and not trends.empty:
+    fig = px.line(trends, x="period_label", y="count", title="Transaction Volume Every 4 Months")
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("No transaction volume data available.")
+
 
 # Auto-refresh
 time.sleep(5)
