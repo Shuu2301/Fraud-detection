@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir \
     pyspark \
     delta-spark
 
-# Pre-download Spark JARs to avoid runtime download issues
+# Pre-download Spark JARs 
 RUN python -c "from pyspark.sql import SparkSession; \
     spark = SparkSession.builder \
     .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.4.1,com.amazonaws:aws-java-sdk-bundle:1.12.262,io.delta:delta-spark_2.13:4.0.0,com.mysql:mysql-connector-j:8.0.33') \

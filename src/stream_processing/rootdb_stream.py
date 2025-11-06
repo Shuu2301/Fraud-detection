@@ -315,9 +315,9 @@ def start_all_table_streams():
     tables = ["transactions", "mcc_codes", "users", "cards"]
     
     queries = []
-    
-    print("Starting CDC streaming for all tables (processing only NEW records after script start)...")
-    
+
+    print("Starting CDC streaming")
+
     for table_name in tables:
         try:
             query = create_table_stream(table_name)
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     
     try:
         # Keep all streams running
-        print("Streams are running. Press Ctrl+C to stop...")
+        print("Streams are running")
         for table_name, query in active_queries:
             print(f"- {table_name}: {query.id}")
         
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         print("\nShutting down streams...")
         for table_name, query in active_queries:
             query.stop()
-            print(f"✓ Stopped {table_name}")
+            print(f"Stopped {table_name}")
         print("All streams stopped.")
     except Exception as e:
         print(f"Error in streaming: {e}")
