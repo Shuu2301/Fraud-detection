@@ -1,5 +1,6 @@
 CREATE DATABASE finance;
 USE finance;
+-- drop database finance
 
 CREATE TABLE users (
     client_id BIGINT PRIMARY KEY,
