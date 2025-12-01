@@ -5,3 +5,5 @@ mysql-connector-python
 pymysql
 cryptography
 pyspark
+nbconvert
+streamlit

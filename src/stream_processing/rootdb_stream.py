@@ -8,14 +8,18 @@ import shutil
 import os
 import time
 
-# Initialize Spark with streaming and Delta Lake
+MINIO_ENDPOINT = "http://localhost:9900"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin123"
+
+# Initialize Spark
 spark = SparkSession.builder \
     .appName("CDC_Stream_Processing") \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9900") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123") \
+    .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT) \
+    .config("spark.hadoop.fs.s3a.access.key", MINIO_ACCESS_KEY) \
+    .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY) \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .config("spark.jars.packages", 
@@ -77,10 +81,6 @@ def get_debezium_schema(table_name):
             acct_open_date:string,
             year_pin_last_changed:string,
             card_on_dark_web:string
-        """,
-        "fraud_labels": """
-            transaction_id:bigint,
-            label:string
         """
     }
     return table_schemas.get(table_name, "")
@@ -96,8 +96,7 @@ def get_table_columns(table_name):
                  "yearly_income", "total_debt", "credit_score", "num_credit_cards"],
         "cards": ["card_id", "client_id", "card_brand", "card_type", "card_number", "expires",
                  "cvv", "has_chip", "num_cards_issued", "credit_limit", "acct_open_date", 
-                 "year_pin_last_changed", "card_on_dark_web"],
-        "fraud_labels": ["transaction_id", "label"]
+                 "year_pin_last_changed", "card_on_dark_web"]
     }
     return columns.get(table_name, [])
 
@@ -107,8 +106,7 @@ def get_table_primary_key(table_name):
         "transactions": "transaction_id",
         "mcc_codes": "mcc", 
         "users": "client_id",
-        "cards": "card_id",
-        "fraud_labels": "transaction_id"
+        "cards": "card_id"
     }
     return primary_keys.get(table_name, "id")
 
@@ -139,10 +137,16 @@ def clean_problematic_fields(df, table_name):
                           .otherwise(col("credit_limit").cast("decimal(10,2)")))
     
     if table_name == "transactions":
-        # For transactions table, handle amount field
+        # For transactions table, handle amount field and convert trans_date from milliseconds to timestamp
         df = df.withColumn("amount", 
                           when(col("amount").rlike("^[A-Za-z0-9+/]*={0,2}$"), lit(0.00).cast("decimal(10,2)"))
-                          .otherwise(col("amount").cast("decimal(10,2)")))
+                          .otherwise(col("amount").cast("decimal(10,2)"))) \
+               .withColumn("trans_date",
+                          # Convert Debezium milliseconds timestamp to proper timestamp
+                          # Debezium MySQL connector sends DATETIME as milliseconds since epoch
+                          when(col("trans_date").isNotNull(), 
+                               (col("trans_date") / 1000).cast("timestamp"))
+                          .otherwise(lit(None).cast("timestamp")))
     
     return df
 
@@ -210,7 +214,7 @@ def create_table_stream(table_name):
     
     print(f"Creating stream for table: {table_name}")
     
-    # Read from Kafka topic starting from latest offset (only new events)
+    # Read from Kafka topic - CHANGED: Use "latest" instead of "earliest" to process only new records
     kafka_df = spark \
         .readStream \
         .format("kafka") \
@@ -279,8 +283,13 @@ def create_table_stream(table_name):
     # Union INSERT/UPDATE and DELETE operations
     all_operations_df = insert_update_df.unionByName(delete_df)
     
-    # Clear any existing checkpoint to ensure fresh start
+    # Use unique checkpoint path with timestamp to ensure fresh start from latest offset
     checkpoint_path = f"/tmp/checkpoints/{table_name}_cdc_{int(time.time())}"
+    
+    # Remove old checkpoint if it exists (force fresh start from latest)
+    if os.path.exists(checkpoint_path):
+        shutil.rmtree(checkpoint_path)
+        print(f"[{table_name}] Cleared old checkpoint at {checkpoint_path}")
     
     # Write to Delta Lake using UPSERT pattern
     query = all_operations_df.writeStream \
@@ -294,13 +303,21 @@ def create_table_stream(table_name):
 def start_all_table_streams():
     """Start CDC streaming for all tables"""
     
+    # Clear all old checkpoints to ensure fresh start from latest offset
+    checkpoint_base = "/tmp/checkpoints/"
+    if os.path.exists(checkpoint_base):
+        print(f"Clearing all old checkpoints from {checkpoint_base}")
+        shutil.rmtree(checkpoint_base)
+        os.makedirs(checkpoint_base)
+        print("Old checkpoints cleared successfully")
+    
     # Define all tables to process
-    tables = ["transactions", "mcc_codes", "users", "cards", "fraud_labels"]
+    tables = ["transactions", "mcc_codes", "users", "cards"]
     
     queries = []
-    
-    print("Starting CDC streaming for all tables with decimal field fixes...")
-    
+
+    print("Starting CDC streaming")
+
     for table_name in tables:
         try:
             query = create_table_stream(table_name)
@@ -312,8 +329,6 @@ def start_all_table_streams():
     return queries
 
 if __name__ == "__main__":
-    print("Starting fixed CDC streaming for all tables...")
-    
     # Start all streams
     active_queries = start_all_table_streams()
     
@@ -321,7 +336,7 @@ if __name__ == "__main__":
     
     try:
         # Keep all streams running
-        print("Streams are running. Press Ctrl+C to stop...")
+        print("Streams are running")
         for table_name, query in active_queries:
             print(f"- {table_name}: {query.id}")
         
@@ -332,7 +347,7 @@ if __name__ == "__main__":
         print("\nShutting down streams...")
         for table_name, query in active_queries:
             query.stop()
-            print(f"✓ Stopped {table_name}")
+            print(f"Stopped {table_name}")
         print("All streams stopped.")
     except Exception as e:
         print(f"Error in streaming: {e}")
